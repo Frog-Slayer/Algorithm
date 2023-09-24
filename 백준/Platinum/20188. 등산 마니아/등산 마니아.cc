@@ -13,7 +13,7 @@ int makeTree(int root, int parent){
 	for (auto c : adj[root]){
 		if (c == parent) continue;
 		child[root].push_back(c);
-		int subSize = makeTree(c, root);
+		long long subSize = makeTree(c, root);
 		size += subSize;
 		ans += 1LL * subSize * (N - subSize) + subSize * (subSize - 1) / 2;
 	}

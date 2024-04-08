@@ -80,12 +80,6 @@ int main(){
             minDist = min(minDist, maxDist);
         }
 
-        minDist *= 100;
-        if (minDist- (long long) minDist> (1e-12)) {
-            minDist += 1;
-            minDist = (long long) minDist;
-        }
-        minDist /= 100;
-        printf("Case %d: %.2f\n", ++caseNumber, minDist);
+        printf("Case %d: %.2f\n", ++caseNumber, ceil(minDist * 100)/100);
     }
 }

@@ -7,12 +7,12 @@ using namespace std;
 const int MAX_N = 5 * 10e5;
 
 int N, M;
-int edge_count[MAX_N + 1], parent[MAX_N +1];
+int degree[MAX_N + 1];//degree가 0 이하면 삭제된 노드다. 
+int parent[MAX_N +1];//노드가 속한 그룹
 
 vector<vector<int>> adj;
 vector<pair<int, int>> dead_signs;
-vector<int> roots;
-queue<int> q;
+queue<int> q; //BFS를 위해 리프노드들을 넣는 큐
 
 int find(int a) {
 	if (parent[a] == a) return a;
@@ -25,71 +25,62 @@ void uni(int a, int b) {
 	parent[a] = b;
 }
 
-int main(int argc, char* argv[]){
+int main(){
 	scanf("%d%d", &N, &M);
-
 	adj.resize(N + 1);
+
 	for (int i = 1; i <= N; i++) parent[i] = i;
 
 	for (int i = 0; i < M; i++){
 		int v, w;
-		cin >> v >> w;
+		scanf("%d%d", &v, &w);
 		adj[v].push_back(w);
 		adj[w].push_back(v);
 
-		edge_count[v]++;
-		edge_count[w]++;
+		degree[v]++;
+		degree[w]++;
 	}
 
-	/**
-	  간선 a <-> b를 생각해보자. 
-	  a 사이클, b 사이클: 표지판 없음
-	  a 사이클, b 트리 : a -> b에 표지판
-	  a 트리, b 사이클 : b -> a 표지판
-	  a 트리, b 트리 : 리프노드에 연결된 간선들에 표지판 
-  	*/
-
-	// 어떤 사이클에 트리가 붙어있는 형태 -> 리프노드들을 하나씩 없애면서 들어가보기. 사이클 -> 트리를 잇는 곳에 표지판 세워짐
-
-	// 얘들은 리프노드
+	// degree가 1이면 리프노드다.
 	for (int i = 1; i <= N; i++) {
-		if (edge_count[i] == 1) {
+		if (degree[i] == 1) {
 			q.push(i);
 		}
 	}
 
+	// BFS를 진행
 	while (!q.empty()) {
 		int front = q.front();
 		q.pop();
-		edge_count[front]--;
+
+		degree[front]--;
 
 		for (int next : adj[front]) {
-			if (!edge_count[next]) continue;
+			if (degree[next] <= 0) continue;//삭제된 노드인 경우는 확인하지 않음
 			uni(front, next);
-			edge_count[next]--;
+			degree[next]--;
 
-			if (edge_count[next] == 1) {//이제 리프라서 지워질 거임
+			if (degree[next] == 1) {//리프라서 곧 지워질 것. 큐에 넣음
 				q.push(next);
 			}
 		}
 	}
 
-	// 사이클에 트리가 붙어 있는 형태
+	// 각 노드들의 BFS 이후 결과 차수를 확인한다.
 	for (int i = 1; i <= N; i++) {
-		//printf("edge_count[%d] = %d\n", i, edge_count[i]);
-		if (edge_count[i] > 0) {//얘는 사이클
-			for (int connected : adj[i]) {
-				if (!edge_count[connected]) {
-					dead_signs.emplace_back(i, connected);
+		if (degree[i] > 0) {//사이클에 포함된 노드인 경우.
+			for (int next: adj[i]) {
+				if (degree[next] <= 0) {
+					dead_signs.emplace_back(i, next);
 				}
 			}
 		}
-		else if (adj[i].size() == 1 && edge_count[find(i)] <=  0){
+		else if (adj[i].size() == 1 && degree[find(i)] <=  0){//원래 리프노드 였고, 해당 노드가 속한 컴포넌트의 루트 노드가 삭제된 경우
 			dead_signs.emplace_back(i, adj[i][0]);
 		}
 	}
-	
 
+	// 명시된 출력 방식에 따라 정렬한다.
 	sort(dead_signs.begin(), dead_signs.end());
 
 	printf("%lu\n", dead_signs.size());

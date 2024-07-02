@@ -3,10 +3,10 @@
 #include <vector>
 #include <algorithm>
 #include <set>
+#include <map>
 using namespace std;
 #define Segment pair<Vector2, Vector2>
 #define _USE_MATH_DEFINES
-#define iflog if (printlog) 
 
 typedef double ld;
 
@@ -82,9 +82,11 @@ struct Vector2 {
 Vector2 light_source;
 vector<Vector2> closest, farthest;
 set<Vector2> points;
-vector<Segment> segs;
+set<Segment> segs;
+map<ld, map<ld, vector<Segment>>> segm;
 vector<ld> seg_angle;
 set<ld> angles;
+
 
 void push_points_and_segments(int left, int top, int right, int bottom) {
 	Vector2 leftTop(left, top), rightTop(right, top), leftBottom(left, bottom), rightBottom(right, bottom);
@@ -94,10 +96,10 @@ void push_points_and_segments(int left, int top, int right, int bottom) {
 	points.insert(rightBottom);
 	points.insert(leftBottom);
 
-	segs.push_back({leftTop, rightTop});
-	segs.push_back({leftTop, leftBottom});
-	segs.push_back({rightTop, rightBottom});
-	segs.push_back({leftBottom, rightBottom});
+	segs.insert({leftTop, rightTop});
+	segs.insert({leftBottom, rightBottom});
+	segs.insert({leftTop, leftBottom});
+	segs.insert({rightTop, rightBottom});
 }
 
 int ccw(Vector2 &a, Vector2 &b, Vector2 &c){
@@ -120,8 +122,7 @@ int intersect(Segment &seg1, Segment &seg2){
 }
 
 ld calc_area(Vector2 &p1, Vector2 &p2) {
-	return fabs((p1 - light_source).cross(p2 - light_source))/ 2;
-}
+	return fabs((p1 - light_source).cross(p2 - light_source))/ 2; }
 
 Vector2 find_intersection(Segment& seg1, Segment& seg2) {
 	Vector2 &a = seg1.first, &b = seg1.second, &c = seg2.first, &d = seg2.second;
@@ -138,29 +139,25 @@ void search(Vector2 point) {
 	Segment light = {light_source, point};
 	vector<pair<Vector2, int>> tmp;
 	
-	int lb = lower_bound(seg_angle.begin(), seg_angle.end(), angle) - seg_angle.begin();
-	iflog printf("sz: %ld, lb: %d\n", seg_angle.size(), lb);
-	
-	for (int i = lb; i < segs.size(); i++) {
-		Segment &seg = segs[i];
-		ld max_angle = max((seg.first - light_source).angle, (seg.second - light_source).angle);
-		ld min_angle = min((seg.first - light_source).angle, (seg.second - light_source).angle);
+	for(auto m = segm.lower_bound(angle); m != segm.end(); m++) {
 
-		if (max_angle - min_angle < M_PI && min_angle - angle > EPSILON) {
-		 	iflog printf("[%d] (max: %f, min: %f). cur: %f.\n", i, max_angle, min_angle , angle);
-		}
+		for (auto mm = (*m).second.begin(); mm != (*m).second.end(); mm++) {
+			if ((*mm).first > angle) break;
+			for (Segment seg : (*mm).second) {
 
-		int intersect_state = intersect(light, seg);
-		if (intersect_state < 0) continue;//교차 안 하는 경우
+				int intersect_state = intersect(light, seg);
+				if (intersect_state < 0) continue;//교차 안 하는 경우
 
-		Vector2 intersection = find_intersection(seg, light);
-		if (intersect_state) tmp.push_back({intersection, 0});//벽에 막혔음
-		else {//꼭짓점. 광원-교점-나머지 꼭짓점의 방향을 계산해서 넣어주기
-			if (angle != (intersection - light_source).angle) continue;
-			Vector2 v1 = seg.first, v2 = seg.second;
-			if (v1 != intersection) swap(v1, v2);
-			int cc = ccw(v1, light_source, v2);
-			tmp.push_back({intersection, cc});
+				Vector2 intersection = find_intersection(seg, light);
+				if (intersect_state) tmp.push_back({intersection, 0});//벽에 막혔음
+				else {//꼭짓점. 광원-교점-나머지 꼭짓점의 방향을 계산해서 넣어주기
+					if (angle != (intersection - light_source).angle) continue;
+					Vector2 v1 = seg.first, v2 = seg.second;
+					if (v1 != intersection) swap(v1, v2);
+					int cc = ccw(v1, light_source, v2);
+					tmp.push_back({intersection, cc});
+				}
+			}
 		}
 	}
 
@@ -174,8 +171,7 @@ void search(Vector2 point) {
 	for (int i = 0; i < tmp.size(); i++) {
 		if (tmp[i].second == 0 || tmp[i].second != tmp[0].second) {
 			far = tmp[i].first;
-			break;
-		}
+			break; }
 	}
 
 	closest.push_back(close);
@@ -207,8 +203,6 @@ ld follow(Vector2 p, int i) {
 int main(){
 	scanf("%d%d", &N, &M);
 
-	push_points_and_segments(0, 0, N, M);
-
 	for (int i = 0; i < N; i++) {
 		scanf("%s", room[i]);
 		for (int j = 0; j < M; j++) {
@@ -217,55 +211,24 @@ int main(){
 				push_points_and_segments(i, j, i + 1, j + 1);
 				wall_cnt++;
 			}
+			if (i == 0) push_points_and_segments(i, j, i, j + 1);
+			else if (i == N - 1) push_points_and_segments(i + 1, j, i + 1, j + 1);
 		}
+		push_points_and_segments(i, 0, i + 1, 0);
+		push_points_and_segments(i, M, i + 1, M);
 	}
 
-	//중복되는 선분 삭제
-	sort(segs.begin(), segs.end());
-	segs.erase(unique(segs.begin(), segs.end()), segs.end());
-
-	//광원과 이루는 최대각을 기준으로 재정렬
-	sort(segs.begin(), segs.end(), [](Segment seg1, Segment seg2) {
-			ld seg1_max = max((seg1.first - light_source).angle, (seg1.second - light_source).angle);
-			ld seg1_min = min((seg1.first - light_source).angle, (seg1.second - light_source).angle);
-			if (seg1_max - seg1_min > M_PI) {
-				swap(seg1_max, seg1_min);
-				seg1_min -= 2 * M_PI;
-			}
-
-			ld seg2_max = max((seg2.first - light_source).angle, (seg2.second - light_source).angle);
-			ld seg2_min = min((seg2.first - light_source).angle, (seg2.second - light_source).angle);
-			if (seg2_max - seg2_min > M_PI) {
-				swap(seg2_max, seg2_min);
-				seg2_min -= 2 * M_PI;
-			}
-
-			return (fabs(seg1_max - seg2_max) < EPSILON ? seg1_min < seg2_min : seg1_max < seg2_max);
-			});
-
-	//단, 원형으로 다시 0도에 걸쳐 있는 경우를 체크
-	//인덱스를 위한 배열도 만들어주기
-	int sz = segs.size();
-	for (int i = 0; i < sz; i++) {
-		Segment &seg = segs[i];
+	for (Segment seg : segs) {
 		ld seg_max = max((seg.first - light_source).angle, (seg.second - light_source).angle);
 		ld seg_min = min((seg.first - light_source).angle, (seg.second - light_source).angle);
 
 		if (seg_max - seg_min > M_PI) {
-			seg_angle.push_back(seg_min);
-			seg_angle.push_back(seg_min + 2 * M_PI);
-			segs.push_back(seg);
+			segm[seg_min + 2 * M_PI][seg_max].push_back(seg);
+			swap(seg_max, seg_min);
+			seg_min -= 2 * M_PI;
 		}
-		else {
-			seg_angle.push_back(seg_max);
-		}
+		segm[seg_max][seg_min].push_back(seg);
 	}
-
-	sort(seg_angle.begin(), seg_angle.end());
-	iflog printf("angles: ");
-
-	iflog for (auto a :seg_angle) printf("%f ", a);
-	iflog printf("\n");
 
 	for (Vector2 p : points) {
 		search(p);
@@ -283,11 +246,11 @@ int main(){
 
 	ld ans = max(follow(closest[0], 0), follow(farthest[0], 0));
 
-	iflog 	for (int i = 0; i < closest.size(); i++) {
+	/**
+	for (int i = 0; i < closest.size(); i++) {
 		printf("[%d]: (%f, %f) - (%f, %f)\n", i, closest[i].x, closest[i].y, farthest[i].x, farthest[i].y);
 	}
-
-	iflog	printf("light: %f\n", ans);
+	*/
 
 	printf("%.14f\n", N * M - ans - wall_cnt);
 

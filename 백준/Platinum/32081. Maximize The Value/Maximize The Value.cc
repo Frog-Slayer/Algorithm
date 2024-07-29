@@ -2,15 +2,15 @@
 #include <vector>
 #include <tuple>
 #include <algorithm>
-#include <map>
+#include <unordered_map>
 using namespace std;
 
 typedef long long ll;
 const ll INF = 1e11;
 int N, M, Q;
 vector<ll> ans;
-map<int, vector<pair<int, int>>> L, R;
-map<int, vector<tuple<int, int, int>>> queries;
+unordered_map<int, vector<pair<int, int>>> L, R;
+unordered_map<int, vector<tuple<int, int, int>>> queries;
 
 struct Node{
     ll left = 0;
@@ -86,10 +86,14 @@ int main() {
 	}
 
 	for (int i = 0; i < N; i++) {
-		for (auto &p : R[i]) update(1, 1, M, p.first, 0);
+		for (auto &p : R[i]) {
+			update(1, 1, M, p.first, 0);
+		}
 
-		for (auto &p : L[i + 1]) update(1, 1, M, p.first, p.second);
-		
+		for (auto &p : L[i + 1]) {
+			update(1, 1, M, p.first, p.second);
+		}
+
 		for (auto &q : queries[i + 1]) {
 			int s, t, idx;
 			tie(s, t, idx) = q;

@@ -4,18 +4,26 @@
 using namespace std;
 
 typedef long long ll;
+const int MAX_N = 1000000;
 int N, M;
 
 struct Node {
-	int mx = -1;
-	int mx_count = 0;
-	int second_mx = -1;
-	ll sum = 0;
+	int mx;
+	int mx_count;
+	int second_mx;
+	ll sum;
+};
 
-	Node operator+(const Node& rhs) {
+Node tree[MAX_N * 4 + 4];
+
+Node add(Node &lhs, Node& rhs) {
 		Node ret;
+		int mx = lhs.mx;
+		int mx_count = lhs.mx_count;
+		int second_mx = lhs.second_mx;
+		ll sum = lhs.sum;
 
-		if (mx == rhs.mx) {
+		if (lhs.mx == rhs.mx) {
 			ret.mx = mx;
 			ret.second_mx = max(second_mx, rhs.second_mx);
 			ret.mx_count = mx_count + rhs.mx_count;
@@ -34,10 +42,6 @@ struct Node {
 		ret.sum = sum + rhs.sum;
 		return ret;
 	}
-};
-
-vector<Node> tree;
-
 void propagate(int node, int start, int end) {
 	if (start == end) return;
 
@@ -60,7 +64,7 @@ void init(int node, int start, int end, int idx, int val) {
 	init(node * 2, start, mid, idx, val);
 	init(node * 2 + 1, mid + 1, end, idx, val);
 
-	tree[node] = tree[node * 2] + tree[node * 2 + 1];
+	tree[node] = add(tree[node * 2], tree[node * 2 + 1]);
 
 }
 
@@ -78,21 +82,29 @@ void update(int node, int start, int end, int left, int right, int val) {
 	update(node * 2, start, mid, left, right, val);
 	update(node * 2 + 1, mid + 1, end, left, right, val);
 
-	tree[node] = tree[node * 2] + tree[node * 2 + 1];
+	tree[node] = add(tree[node * 2], tree[node * 2 + 1]);
 }
 
-Node query(int node, int start, int end, int left, int right) {
+ll query_sum(int node, int start, int end, int left, int right) {
 	propagate(node, start, end);
-	if (right < start || end < left) return Node();
-	if (left <= start && end <= right) return tree[node];
+	if (right < start || end < left) return 0;
+	if (left <= start && end <= right) return tree[node].sum;
 
 	int mid = (start + end) / 2;
-	return query(node * 2, start, mid, left, right) + query(node * 2 + 1, mid + 1, end, left, right);
+	return query_sum(node * 2, start, mid, left, right) + query_sum(node * 2 + 1, mid + 1, end, left, right);
+}
+
+int query_max(int node, int start, int end, int left, int right) {
+	propagate(node, start, end);
+	if (right < start || end < left) return 0;
+	if (left <= start && end <= right) return tree[node].mx;
+
+	int mid = (start + end) / 2;
+	return max(query_max(node * 2, start, mid, left, right), query_max(node * 2 + 1, mid + 1, end, left, right));
 }
 
 int main() {
 	scanf("%d", &N);
-	tree.resize(4 * N + 4);
 
 	for (int a, i = 1; i <= N; i++) {
 		scanf("%d", &a);
@@ -109,7 +121,7 @@ int main() {
 			scanf("%d", &x);
 			update(1, 1, N, l, r, x);
 		}
-		else if (t == 2) printf("%d\n", query(1, 1, N, l, r).mx);
-		else printf("%lld\n", query(1, 1, N, l, r).sum);
+		else if (t == 2) printf("%d\n", query_max(1, 1, N, l, r));
+		else printf("%lld\n", query_sum(1, 1, N, l, r));
 	}
 }

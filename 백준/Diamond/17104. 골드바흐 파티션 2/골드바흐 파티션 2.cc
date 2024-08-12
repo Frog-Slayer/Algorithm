@@ -86,6 +86,7 @@ int main() {
 	while (T--) {
 		int N;
 		scanf("%d", &N);
-		printf("%d\n", res[N / 2 - 1] / 2 + is_prime[N / 2]);
+        if (N == 4) printf("1\n");
+		else printf("%d\n", (res[N / 2 - 1] + 1) / 2);
 	}
 }

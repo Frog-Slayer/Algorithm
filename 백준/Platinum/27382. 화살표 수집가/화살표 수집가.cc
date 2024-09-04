@@ -13,48 +13,41 @@ ll operator!(const Point &p) { return (ll)p.first * p.first + (ll)p.second * p.s
 ll operator*(Point &p1, Point &p2) { return (ll)p1.first * p2.first + (ll)p1.second * p2.second; }
 ll operator/(Point &p1, Point &p2) { return (ll)p1.first * p2.second - (ll)p1.second * p2.first; }
 
-struct Segtree {
+struct Fenwick {
 	int N;
 	vector<int> tree;
 
 	void resize(int _N) {
 		N = _N;
-		tree.resize(4 * N);
+		tree.resize(N + 1);
 	}
 
 	void clear() {
 		tree.clear();
-		tree.resize(4 * N);
+		tree.resize(N + 1);
 	}
 
-	void update(int node, int start, int end, int left, int right, int val) {
-		if (right < start || end < left) return;
-		if (left <= start && end <= right) {
-			tree[node] += val;
-			return;
+	void update(int i, int val) {
+		while (i <= N) {
+			tree[i]++;
+			i += (i & -i);
 		}
-
-		int mid = (start + end) / 2;
-		update(node * 2, start, mid, left, right, val);
-		update(node * 2 + 1, mid + 1, end, left, right, val);
-		tree[node] = tree[node * 2] + tree[node * 2 + 1];
 	}
 
-	void update(int idx, int val) {
-		update(1, 0, N - 1, idx, idx, val);
-	}
-
-	int query(int node, int start, int end, int left, int right) {
-		if (right < start || end < left) return 0;
-		if (left <= start && end <= right) return tree[node];
-
-		int mid = (start + end) / 2;
-		return query(node * 2, start, mid, left, right) + query(node * 2 + 1, mid + 1, end, left, right);
+	int query(int i) {
+		int ret = 0;
+		while (i > 0) {
+			ret += tree[i];
+			i -= (i & -i);
+		}
+	
+		return ret;
 	}
 
 	int query(int left, int right) {
-		return query(1, 0, N - 1, left, right);
+		return query(right) - query(left - 1);
 	}
+
 } tree;
 
 ll ans;
@@ -84,7 +77,7 @@ void solve(int idx) {
 	while (b < B.size() && B[b].second < 0) {
 		while (c < b && B[c] * B[b] <= 0) c++;
 		while (d < B.size() && B[d] * B[b] > 0) d++;
-		range[b++] = { c, d - 1 }; 
+		range[b++] = { c + 1, d }; 
 	}
 
 	vector<pair<ll, int>> dist(B.size());
@@ -101,11 +94,11 @@ void solve(int idx) {
 			int b = dist[k].second;
 			if (B[b].first > 0 && B[b].second < 0) {
 				int l = range[b].first, r = range[b].second; 
-				ans += (ll)tree.query(l, b - 1) * (ll)tree.query(b + 1, r);
+				ans += (ll)tree.query(l, b + 1) * (ll)tree.query(b + 2, r);
 			}
 		}
 
-		for (int k = i; k < j; k++) tree.update(dist[k].second, 1); 
+		for (int k = i; k < j; k++) tree.update(dist[k].second + 1, 1); 
 	}
 }
 

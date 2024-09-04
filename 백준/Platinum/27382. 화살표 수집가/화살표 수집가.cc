@@ -6,12 +6,12 @@
 using namespace std;
 #define all(v) v.begin(), v.end()
 typedef long long ll;
-typedef pair<ll, ll> Point;
+typedef pair<int, int> Point;
 
 vector<Point> v;
-ll operator!(const Point &p) { return p.first * p.first + p.second * p.second; }
-ll operator*(Point &p1, Point &p2) { return p1.first * p2.first + p1.second * p2.second; }
-ll operator/(Point &p1, Point &p2) { return p1.first * p2.second - p1.second * p2.first; }
+ll operator!(const Point &p) { return (ll)p.first * p.first + (ll)p.second * p.second; }
+ll operator*(Point &p1, Point &p2) { return (ll)p1.first * p2.first + (ll)p1.second * p2.second; }
+ll operator/(Point &p1, Point &p2) { return (ll)p1.first * p2.second - (ll)p1.second * p2.first; }
 
 struct Segtree {
 	int N;
@@ -44,7 +44,7 @@ struct Segtree {
 		update(1, 0, N - 1, idx, idx, val);
 	}
 
-	ll query(int node, int start, int end, int left, int right) {
+	int query(int node, int start, int end, int left, int right) {
 		if (right < start || end < left) return 0;
 		if (left <= start && end <= right) return tree[node];
 
@@ -52,7 +52,7 @@ struct Segtree {
 		return query(node * 2, start, mid, left, right) + query(node * 2 + 1, mid + 1, end, left, right);
 	}
 
-	ll query(int left, int right) {
+	int query(int left, int right) {
 		return query(1, 0, N - 1, left, right);
 	}
 } tree;
@@ -101,7 +101,7 @@ void solve(int idx) {
 			int b = dist[k].second;
 			if (B[b].first > 0 && B[b].second < 0) {
 				int l = range[b].first, r = range[b].second; 
-				ans += tree.query(l, b - 1) * tree.query(b + 1, r);
+				ans += (ll)tree.query(l, b - 1) * (ll)tree.query(b + 1, r);
 			}
 		}
 

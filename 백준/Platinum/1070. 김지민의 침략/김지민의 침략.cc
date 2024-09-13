@@ -60,7 +60,7 @@ bool bfs(){
 		int front = q.front();
 		q.pop();
 
-		for (auto edge : edges[front]){
+		for (auto &edge : edges[front]){
 			if (level[edge->to] != -1) continue;
 			if (edge->left() > 0) {
 				q.push(edge->to); 
@@ -75,8 +75,7 @@ bool bfs(){
 int dfs(int current, int flow){
 	if (current == sink) return flow;
 
-	for (int i = 0; i < edges[current].size(); i++){
-		Edge *edge = edges[current][i];
+	for (auto &edge : edges[current]){
 		int to = edge->to; 
 		int left = edge->left();
 
@@ -98,7 +97,7 @@ int mfmc() {
 	while (bfs()){
 		while (true) {
 			int f = dfs(source, INF);
-			ret = (ret + f) % MAX;
+			ret += f;
 			if (!f) break;
 		}
 	}
@@ -143,5 +142,5 @@ int main(){
 		}
 	}
 
-	printf("%d", mfmc());
+	printf("%d", mfmc() % MAX);
 }

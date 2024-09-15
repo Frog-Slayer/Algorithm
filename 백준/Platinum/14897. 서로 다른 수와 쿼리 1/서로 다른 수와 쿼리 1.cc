@@ -1,86 +1,97 @@
 #include <iostream>
 #include <vector>
-#include <math.h>
 #include <algorithm>
-#include <tuple>
 using namespace std;
+#define all(v) v.begin(), v.end()
 
-const int MAX_N = 1000000;
+const int MAX_N = 1e6 + 1;
+int N, Q;
 
-int N, M;
-int A[MAX_N], cnt[MAX_N];
+struct Node {
+	int val;
+	int left;
+	int right;
 
-vector<tuple<int, int, int>> queries;
-vector<int> ans;
-vector<int> compress;
+	Node () {}
+	Node (int _val, int _left, int _right) : val(_val), left(_left), right(_right) {}
+};
 
-int main(){
+int cnt = 0;
+vector<int> root(MAX_N);
+vector<Node> nodes(MAX_N * 21 * 2);
+
+void update(int node, int start, int end, int idx, int val) {
+	nodes[node].val += val;
+
+	if (start == end) return; 
+
+	int mid = (start + end) / 2;
+	if (idx <= mid) {
+		int left = nodes[node].left;
+		int right = nodes[node].right;
+		nodes[++cnt] = nodes[left];
+		nodes[node].left = left = cnt;
+		update(left, start, mid, idx, val);
+		return;
+	}
+
+	int left = nodes[node].left;
+	int right = nodes[node].right;
+	nodes[++cnt] = nodes[right];
+	nodes[node].right =  right = cnt;
+	update(right, mid + 1, end, idx, val);
+	return;
+}
+
+int query(int node, int start, int end, int left, int right) {
+	if (right < start || end < left) return 0;
+	if (left <= start && end <= right) return nodes[node].val;
+	
+	int mid = (start + end) / 2;
+	return query(nodes[node].left, start, mid, left, right) + query(nodes[node].right, mid + 1, end, left, right);
+}
+
+vector<int> arr(MAX_N);
+vector<int> compressed, prv(MAX_N);
+
+int main() {
 	scanf("%d", &N);
 
-	for (int i = 0; i < N; i++){
-		scanf("%d", &A[i]);
-		compress.push_back(A[i]);
+	for (int i = 1; i <= N; i++) {
+		scanf("%d", &arr[i]);
+		compressed.emplace_back(arr[i]);
 	}
 
-	sort(compress.begin(), compress.end());
-	compress.erase(unique(compress.begin(), compress.end()), compress.end());
+	sort(all(compressed));
+	compressed.erase(unique(all(compressed)), compressed.end());
 
-	for (int i = 0; i < N; i++){
-		A[i] = lower_bound(compress.begin(), compress.end(), A[i]) - compress.begin();
+	for (int i = 1; i <= N; i++) arr[i] = lower_bound(all(compressed), arr[i]) - compressed.begin();
+	vector<int> tmp(compressed.size(), 0);
+
+	for (int i = 1; i <= N; i++) {
+		prv[i] = tmp[arr[i]];
+		tmp[arr[i]] = i;
 	}
 
-	scanf("%d", &M);
-	ans.resize(M);
+	root[0] = ++cnt;
 
-	for (int q = 0; q < M; q++){
-		int i, j;
-		scanf("%d%d", &i, &j);
-		queries.emplace_back(q, i-1, j-1);
-	}
-
-	int k = sqrt(N);
-
-	sort(queries.begin(), queries.end(), [k](tuple<int, int, int>  &a, tuple<int, int, int>  &b) {
-			int s1 = get<1>(a), e1 = get<2>(a), s2 = get<1>(b), e2 = get<2>(b);
-			if (s1/k < s2/k) return true;
-			return (s1/k  == s2/k && e1 < e2);
-		});
-
-	int idx, s, e;
-	tie(idx, s, e) = queries[0];
-	int left = s, right = e;
-
-	int distinct_count = 0;
-
-	for (int i = s; i <= e; i++){
-		cnt[A[i]]++;
-		if (cnt[A[i]] == 1) distinct_count++;
-	}
-
-	ans[idx] = distinct_count;
-
-	for (int i = 1; i < M; i++){
-		tie(idx, s, e) = queries[i];
-		while (left > s) {
-			if (++cnt[A[--left]] == 1) distinct_count++;
+	for (int i = 1; i <= N; i++) {
+		root[i] = ++cnt;
+		nodes[root[i]] = nodes[root[i - 1]];
+		update(root[i], 1, N, i, 1);
+		if (prv[i]) {
+			nodes[++cnt] = nodes[root[i]];
+			root[i] = cnt;
+			update(root[i], 1, N, prv[i], -1);
 		}
-
-		while (left < s) {
-			if (--cnt[A[left++]] == 0) distinct_count--;
-		}
-
-		while (right > e) {
-			if (--cnt[A[right--]] == 0) distinct_count--;
-
-		}
-
-		while (right < e) {
-			if (++cnt[A[++right]] == 1) distinct_count++;
-		}
-
-		ans[idx] = distinct_count;
 	}
 
-	for (int a : ans) printf("%d\n", a);
+	scanf("%d", &Q);
 
+	int q = 0;
+	for (int i = 0; i < Q; i++) {
+		int l, r;
+		scanf("%d%d", &l, &r);
+		printf("%d\n", q = query(root[r], 1, N, l, r));
+	}
 }

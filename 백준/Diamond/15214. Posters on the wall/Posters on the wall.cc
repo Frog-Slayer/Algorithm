@@ -109,12 +109,20 @@ int main() {
 	open[0] = init(0, yy.size() - 1); 
 	area[0] = init(0, yy.size() - 1);
 
-	for (auto &[x, v, y1, y2] : events) {
+	for (int i = 0, j = 0; i < events.size(); i = j) {
 		Node *open_root = new Node(open.rbegin()->second);
-		open[x] = update(open_root, v, y1, y2);
-
 		Node *area_root= new Node(area.rbegin()->second);
-		area[x] = update(area_root, -v * x, y1, y2);
+
+		while (j < events.size() && get<0>(events[i]) == get<0>(events[j])) j++;
+
+		for (int k = i; k < j; k++) {
+			auto &[x, v, y1, y2] = events[k];
+			open_root = update(open_root, v, y1, y2);
+			area_root = update(area_root, -v * x, y1, y2);
+		}
+
+		open[get<0>(events[i])] = open_root;
+		area[get<0>(events[i])] = area_root;
 	}
 
 	ll l = 0;

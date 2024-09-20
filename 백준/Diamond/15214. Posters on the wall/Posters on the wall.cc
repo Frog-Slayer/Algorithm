@@ -13,7 +13,7 @@ struct Node {
 	Node(int start, int end);
 	Node(Node* node);
 
-	ll start, end;
+	int start, end;
 	Node* left = NULL;
 	Node* right = NULL;
 
@@ -47,12 +47,12 @@ Node* init(int start, int end) {
 	return ret;
 }
 
-Node* update(Node* node, ll x, ll y1, ll y2) {
+Node* update(Node* node, int x, int y1, int y2) {
 	if (y2 <= node->start || node->end <= y1) return node;
 
 	Node *ret = new Node(node);
 	if (y1 <= node->start && node->end <= y2) {
-		ret->sum += (ret->end - ret->start) * x;
+		ret->sum += (ll)(ret->end - ret->start) * x;
 		ret->lazy += x;
 		return ret;
 	}
@@ -63,11 +63,11 @@ Node* update(Node* node, ll x, ll y1, ll y2) {
 	return ret;
 }
 
-ll query(Node* node, ll y1, ll y2) {
+ll query(Node* node, int y1, int y2) {
 	if (y2 <= node->start || node->end <= y1) return 0;
 	if (y1 <= node->start && node->end <= y2) return node->sum;
 
-	ll intersect = min(node->end, y2) - max(node->start, y1);
+	int intersect = min(node->end, y2) - max(node->start, y1);
 
 	if (node->left && node->right) return query(node->left, y1, y2) + query(node->right, y1, y2) + node->lazy * intersect; 
 	return node->sum / (node->end - node->start) * intersect;
@@ -75,7 +75,7 @@ ll query(Node* node, ll y1, ll y2) {
 
 map<int, Node*> open, area;
 
-ll get_area(ll x, ll y1, ll y2) {
+ll get_area(int x, int y1, int y2) {
 	Node *op = (prev(open.upper_bound(x)))->second;
 	Node *ar = (prev(area.upper_bound(x)))->second;
 
@@ -109,11 +109,10 @@ int main() {
 	open[0] = init(0, yy.size() - 1); 
 	area[0] = init(0, yy.size() - 1);
 
+	Node *open_root = open[0];
+	Node *area_root = area[0];
 	for (int i = 0, j = 0; i < events.size(); i = j) {
-		Node *open_root = new Node(open.rbegin()->second);
-		Node *area_root= new Node(area.rbegin()->second);
-
-		while (j < events.size() && get<0>(events[i]) == get<0>(events[j])) j++;
+        while (j < events.size() && get<0>(events[i]) == get<0>(events[j])) j++;
 
 		for (int k = i; k < j; k++) {
 			auto &[x, v, y1, y2] = events[k];

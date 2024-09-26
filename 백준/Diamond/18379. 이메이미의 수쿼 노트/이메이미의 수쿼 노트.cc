@@ -11,7 +11,6 @@ const int MOD = 998'244'353;
 struct Node {
 	Node() {}
 	Node(int i); 
-	int idx = 0;
 	int left = 0;
 	int right = 0;
 
@@ -24,7 +23,6 @@ vector<Node> nodes;
 
 Node::Node(int i) {
 	Node &node = nodes[i];
-	this->idx = nodes.size();
 	val = node.val;
 	mult = node.mult;
 	add = node.add;
@@ -43,17 +41,17 @@ void propagate(int root, int start, int end) {
 	node.val = ((ll)node. mult * node.val + (ll)(end - start + 1) * node.add) % MOD;
 
 	if (start != end) {
-		Node &left = nodes[add_node(node.left)];
-		Node &right = nodes[add_node(node.right)];
+		int lidx = node.left = add_node(node.left);
+		int ridx = node.right = add_node(node.right);
+
+		Node &left = nodes[lidx];
+		Node &right = nodes[ridx];
 
 		left.mult = ((ll)left.mult * node.mult) % MOD;
 		right.mult = ((ll)right.mult * node.mult) % MOD;
 
 		left.add = ((ll)left.add * node.mult + node.add) % MOD;
 		right.add = ((ll)right. add * node.mult + node.add) %MOD;
-
-		node.left = left.idx;
-		node.right = right.idx;
 	}
 
 	node.mult = 1;
@@ -62,22 +60,24 @@ void propagate(int root, int start, int end) {
 
 int update(int root, int start, int end, int left, int right, ll a, ll b){
 	propagate(root, start, end);
-	Node &node = nodes[root];
+
 	if (right < start || end < left) return root; 
+
+	int nidx = add_node(root);
+	Node &ret = nodes[nidx]; 
+
 	if (left <= start && end <= right){
-		Node &ret = nodes[add_node(root)]; 
 		ret.mult = (a * ret.mult) % MOD;
 		ret.add = (ret.add * a + b) % MOD;
-		propagate(ret.idx, start, end);
-		return ret.idx;
+		propagate(nidx, start, end);
+		return nidx;
 	}
 
-	Node &ret = nodes[add_node()]; 
 	int mid = (start + end) / 2;
-	ret.left = update(node.left, start, mid, left, right, a, b);
-	ret.right = update(node.right, mid + 1, end, left, right, a, b);
+	ret.left = update(ret.left, start, mid, left, right, a, b);
+	ret.right = update(ret.right, mid + 1, end, left, right, a, b);
 	ret.val = ((ll)nodes[ret.left].val + nodes[ret.right].val) % MOD;
-	return ret.idx;
+	return nidx;
 }
 
 ll query(int root, int start, int end, int left, int right) {
@@ -91,19 +91,18 @@ ll query(int root, int start, int end, int left, int right) {
 }
 
 int init(vector<int>& A, int start, int end) {
-	Node &node = nodes[add_node()];
+	int nidx = add_node();
+	Node &node = nodes[nidx];
 
-	if (start == end){
-		node.val = A[start];
-		return node.idx; 
+	if (start == end) node.val = A[start];
+	else {
+		int mid = (start + end) / 2;
+		node.left = init(A, start, mid);
+		node.right = init(A, mid + 1, end);
+		node.val = ((ll)nodes[node.left].val + nodes[node.right].val) % MOD;
 	}
 
-	int mid = (start + end) / 2;
-	node.left = init(A, start, mid);
-	node.right = init(A, mid + 1, end);
-	node.val = ((ll)nodes[node.left].val + nodes[node.right].val) % MOD;
-
-	return node.idx;
+	return nidx;
 }
 
 int main() {
@@ -127,7 +126,7 @@ int main() {
 	for (int i = 0; i < M; i++) {
 		cin >> t >> l >> r >> v;
 
-		if (t == 0) {
+		if (t == 0) {//add
 			int add = update(root[0], 0, N, l, r, 1, v);
 			int mlt = update(root[1], 0, N, l, r, v, 0);
 			int mod = root[(v + 3) % 4];

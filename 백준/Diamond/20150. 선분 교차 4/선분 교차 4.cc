@@ -1,25 +1,33 @@
 #include <iostream>
 #include <vector>
-#include <tuple>
 #include <algorithm>
 #include <set>
 #include <cmath>
 using namespace std;
+
+#define fastio cin.tie(NULL); cout.tie(NULL); ios_base::sync_with_stdio(false)
 #define all(v) v.begin(), v.end()
 
 typedef __int128 ll;
 typedef pair<ll, ll> Point;
-typedef long double ld;
-const ll K = 2e9 + 7;//나오지 않을 기울기
-ll cur;
+
+Point operator-(const Point& p1, const Point& p2) {
+	return Point(p1.first - p2.first, p1.second - p2.second);
+}
+
+ll operator*(const Point& p1, const Point& p2) {
+	return p1.first * p2.second - p1.second * p2.first;
+}
+
+ll K, cur;
 
 struct Segment {
 	Point s, e;
 	int idx;
 
 	Segment(Point _s, Point _e, int _idx) {
-		s = {_s.first + K * _s.second, -K * _s.first + _s.second };
-		e = {_e.first + K * _e.second, -K * _e.first + _e.second };
+		s = Point(K * _s.first + _s.second, -1 * _s.first + K * _s.second);
+		e = Point(K * _e.first + _e.second, -1 * _e.first + K * _e.second);
 		idx = _idx;
 
 		if (s > e) swap(s, e);
@@ -31,11 +39,8 @@ struct Segment {
 		auto &[x3, y3] = rhs.s;
 		auto &[x4, y4] = rhs.e;
 
-		ld scope1 = 1.0 * (y2 - y1) / (x2- x1);
-		ld scope2 = 1.0 * (y4 - y3) / (x4- x3);
-
-		ld eval1 = scope1 * (cur - x1) + y1;
-		ld eval2 = scope2 * (cur - x3) + y3;
+		ll eval1 = (y2 - y1) * (x4- x3) * (cur- x1) + y1 * (x2- x1) * (x4- x3);
+		ll eval2 = (y4 - y3)* (x2- x1) * (cur- x3) + y3 * (x2- x1) * (x4- x3);
 
 		if (eval1 != eval2) return eval1 < eval2;
 		return idx < rhs.idx;
@@ -56,7 +61,7 @@ struct Event {
 };
 
 int ccw(Point& a, Point& b, Point& c) {
-	ll ret = (b.first - a.first) * (c.second - b.second) - (b.second - a.second) * (c.first - b.first);
+	ll ret = (b - a) * (c - b);
 
 	return ret > 0 ? 1 : ret ? -1 : 0;
 }
@@ -112,17 +117,29 @@ bool solve() {
 
 	return false;
 }
+
 int main() {
+	fastio;
+
 	int N;
-	scanf("%d", &N);
+	cin >> N;
+
+	vector<pair<Point, Point>> points;
+	set<ll> slopes;
 
 	for (int i = 0; i < N; i++) {
 		int x1, y1, x2, y2;
-		scanf("%d%d%d%d", &x1, &y1, &x2, &y2);
-		segments.emplace_back(Point(x1, y1), Point(x2, y2), i);
+		cin >> x1 >> y1 >> x2 >> y2;
+
+		points.emplace_back(Point(x1, y1), Point(x2, y2));
+		if (x1 != x2) slopes.insert((y2 - y1) / (x2 - x1));
 	}
 
+	while (slopes.find(K) != slopes.end()) K++;
 
-	printf("%d", solve());
+	for (int i = 0; i < N; i++) {
+		segments.emplace_back(points[i].first, points[i].second, i);
+	}
 
+	cout << solve();
 }

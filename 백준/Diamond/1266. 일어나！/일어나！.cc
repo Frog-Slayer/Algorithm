@@ -1,79 +1,92 @@
 #include <iostream>
 #include <vector>
-#include <tuple>
 #include <algorithm>
-#include <set>
 #include <queue>
+#include <set>
 #include <cmath>
+#include <cassert>
 using namespace std;
 
+#define fastio cin.tie(NULL); cout.tie(NULL); ios_base::sync_with_stdio(false)
 typedef double ld;
+typedef pair<ld, ld> Point;
+
+const ld EPSILON = 1e-6;
 const int START = 0;
 const int INTERSECT = 1;
 const int END = 2;
-const int INF = 2e6 + 7;
 
-typedef pair<ld, ld> Point;
+Point operator*(const Point &p, const ld &d) { return { p.first * d, p.second * d}; } 
+Point operator-(const Point &p1, const Point &p2) { return Point(p1.first - p2.first, p1.second - p2.second); }
+Point operator+(const Point &p1, const Point &p2) { return Point(p1.first + p2.first, p1.second + p2.second); }
+ld operator*(const Point &p1, const Point &p2) { return p1.first * p2.second - p1.second * p2.first; }
 
-Point operator*(const Point &p, const ld &d) { return { p.first * d, p.second * d}; }
-Point operator-(const Point &p, const Point &d) { return { p.first - d.first, p.second - d.second };}
-Point operator+(const Point &p, const Point &d) { return { p.first + d.first, p.second + d.second };}
-ld operator*(const Point &p, const Point &d) { return p.first * d.second - p.second * d.first; }
+int K;
+ld cur_x;
+bool after_intersection;
 
-ld cur;
+bool is_zero(ld d) {
+	return fabsl(d) < EPSILON;
+}
+
 struct Segment{ 
 	Point s;
 	Point e;
 	int idx;
-	ld scope;
-	
+	ld slope;
+
 	Segment(Point _s, Point _e, int _idx) {
-		s = _s; e = _e;
 		idx = _idx;
+		s = Point(K * _s.first - _s.second, _s.first + K * _s.second);
+		e = Point(K * _e.first - _e.second, _e.first + K * _e.second);
 
 		if (e < s) swap(s, e);
-
-		if (e.first == s.first) scope = INF;
-		else scope = (e.second - s.second) / (e.first - s.first); 
+		slope = (e.second - s.second) / (e.first - s.first);
 	}
 
 	ld eval() const {
-		return scope * (cur - s.first) + s.second;
+		return slope * (cur_x- s.first) + s.second;
 	}
 
 	bool operator<(const Segment& rhs) const {
 		ld ev1 = eval();
 		ld ev2 = rhs.eval();
 		
-		if (ev1 != ev2) return ev1 < ev2;
-		return scope < rhs.scope;
+		if (!is_zero(ev1 - ev2)) return ev1 < ev2;
+		if (slope != rhs.slope) return after_intersection ? slope < rhs.slope : rhs.slope < slope ;
+		return idx < rhs.idx;
 	}
 
 	Point operator*(const Segment& rhs) const {
-		ld det = (e- s) * (rhs.e - rhs.s);
-		auto ret = s + (e - s) * ((rhs.s - s) * (rhs.e - rhs.s)/det);
-		return ret;
+		ld det = (e - s) * (rhs.e - rhs.s);
+
+		if (!det) {
+			if (e == rhs.s) return e;
+			return s;
+		}
+
+		return s + (e - s) * ((rhs.s - s) * (rhs.e - rhs.s)/det);
 	}
 };
 
 struct Event {
 	ld x;
 	ld y;
-	int val;
+	int type;
 	int idx1;
 	int idx2;
 
-	Event(Point p, int _val, int _idx) : x(p.first), y(p.second), val(_val), idx1(_idx), idx2(_idx) {}
-	Event(Point p, int _val, int _idx1, int _idx2) : x(p.first), y(p.second), val(_val), idx1(_idx1), idx2(_idx2) {}
+	Event(Point p, int _type, int _idx) : x(p.first), y(p.second), type(_type), idx1(_idx), idx2(_idx) {}
+	Event(Point p, int _type, int _idx1, int _idx2) : x(p.first), y(p.second), type(_type), idx1(_idx1), idx2(_idx2) {}
 
-	bool operator<(const Event& e) const {
-		return tie(x, y, val) < tie(e.x, e.y, e.val);
+	bool operator<(const Event &e) const {
+		return tie(x, y, type) > tie(e.x, e.y, e.type);
 	}
 };
 
 int ccw(Point& a, Point& b, Point& c) {
-	ld ret =  (b.first - a.first) * (c.second - b.second) - (b.second - a.second) * (c.first - b.first);
-	return ret == 0 ? 0 : ret > 0 ? 1 : -1; 
+	ld ret = (b - a) * (c - b);
+	return is_zero(ret)? 0 : ret > 0 ? 1 : -1; 
 }
 
 bool intersect(const Segment& seg1, const Segment& seg2) {
@@ -94,107 +107,117 @@ bool intersect(const Segment& seg1, const Segment& seg2) {
 }
 
 vector<Segment> segments;
-multiset<Event> events;
-multiset<Segment> ms;
+priority_queue<Event> events;
+multiset<Segment> T;
 set<pair<int, int>> ans;
 
 void push(Point &intersection, int idx1, int idx2) {
 	if (idx1 < idx2) swap(idx1, idx2);
-	Event e = Event(intersection, 1, idx1, idx2);
-	if (isnan(intersection.first) || isnan(intersection.second)) ans.insert({idx1, idx2}); 
-	else if (events.find(e) == events.end()) events.insert(e);
+	if (ans.find({idx1, idx2}) != ans.end()) return;
+
+	ans.insert({idx1, idx2}); 
+	Event e = Event(intersection, INTERSECT, idx1, idx2);
+	events.push(e);
 }
 
-void solve() {
-	for (auto &seg : segments) {
-		auto &[s, e, idx, scope] = seg;
-		events.insert(Event(s, START, idx));
-		events.insert(Event(e, END, idx));
+void bentley_ottmann() {
+	for (auto &[s, e, idx, slope] : segments) {
+		events.push(Event(s, START, idx));
+		events.push(Event(e, END, idx));
 	}
 
 	while (!events.empty()) {
-		auto it = events.begin();
-		auto [x, y, val, idx1, idx2] = *it;
-		cur = x;
+		auto [x, y, type, idx1, idx2] = events.top(); 
+		events.pop();
+		cur_x = x;
 
-		switch (val) {
-			case START :{
-					auto seg = segments[idx1];
-					auto it = ms.insert(seg);
-					auto nxt = next(it);
-					auto prv = prev(it);
+		if (type == START) {//INSERT
+			auto seg = segments[idx1];
+			auto it = T.insert(seg);
+			auto above = next(it);
+			auto below = prev(it);
 
-					if (nxt != ms.end() && intersect(*nxt, *it)) {
-						Point intersection = (*nxt) * (*it);
-						push(intersection, it->idx, nxt->idx);
-					}
+			if (above != T.end() && intersect(*above, *it)) {
+				Point intersection = (*above) * (*it);
+				push(intersection, it->idx, above->idx);
+			}
 
-					if (it != ms.begin() && intersect(*prv, *it)) {
-						Point intersection = (*prv) * (*it);
-						push(intersection, it->idx, prv->idx);
-					}
-					break;
-				}
-			case END: {
-					auto seg = segments[idx1];
-					auto it = ms.lower_bound(seg);
-
-					auto nxt = next(it);
-					auto prv = prev(it);
-
-					if (it != ms.begin() && nxt != ms.end() && intersect(*prv, *nxt)) {
-						Point intersection = (*prv) * (*nxt);
-						push(intersection, nxt->idx, prv->idx);
-					}
-
-					ms.erase(it);
-
-					break;
-				  }
-			case INTERSECT: {
-					if (idx1 < idx2) swap(idx1, idx2);
-					ans.insert({idx1, idx2});
-
-					auto seg1 = segments[idx1];
-					auto seg2 = segments[idx2];
-
-					ms.erase(seg1); ms.erase(seg2);
-					seg1.s = seg2.s = segments[idx1].s = segments[idx2].s = {x, y};
-
-					if (seg2.scope < seg1.scope) swap(seg1, seg2);
-
-					auto upper = ms.insert(seg2);
-					auto upper_nxt = next(upper);
-
-					if (upper_nxt != ms.end() && intersect(*upper, *upper_nxt)) {
-						Point intersection = (*upper) * (*upper_nxt);
-						push(intersection, upper->idx, upper_nxt->idx);
-					}
-
-					auto lower = ms.insert(seg1);
-					auto lower_prv = prev(lower);
-
-					if (lower != ms.begin() && intersect(*lower, *lower_prv)) {
-						Point intersection = (*lower) * (*lower_prv);
-						push(intersection, lower->idx, lower_prv->idx);
-					}
-				}
+			if (it != T.begin() && intersect(*below, *it)) {
+				Point intersection = (*below) * (*it);
+				push(intersection, it->idx, below->idx);
+			}
 		}
-		events.erase(it);
+		else if (type == END) {//ERASE
+			auto seg = segments[idx1];
+
+			auto it = T.lower_bound(seg);
+
+			auto above = next(it);
+			auto below = prev(it);
+
+			if (it != T.begin() && above != T.end() && intersect(*below, *above)) {
+				Point intersection = (*below) * (*above);
+				push(intersection, above->idx, below->idx);
+			}
+
+			T.erase(it);
+		}
+		else {//INTERSECT
+			auto seg1 = segments[idx1];
+			auto seg2 = segments[idx2];
+			
+			if (is_zero(x - seg1.e.first) || is_zero(x - seg2.e.first)) continue;
+
+			T.erase(seg1); T.erase(seg2);
+
+			after_intersection = true;
+
+			if (seg2.slope < seg1.slope) swap(seg1, seg2);
+			
+			auto upper = T.insert(seg2);
+			auto lower = T.insert(seg1);
+
+			auto above = next(upper);
+			auto below = prev(lower);
+
+			if (above != T.end() && intersect(*upper, *above)) {
+				Point intersection = (*upper) * (*above);
+				push(intersection, upper->idx, above->idx);
+			}
+
+			if (lower != T.begin() && intersect(*lower, *below)) {
+				Point intersection = (*lower) * (*below);
+				push(intersection, lower->idx, below->idx);
+			}
+
+			after_intersection = false;
+		}
 	}
 }
 
 int main() {
+	fastio;
+
 	int N;
-	scanf("%d", &N);
+	cin >> N;
+
+	vector<pair<Point, Point>> endpoints;
+	set<int> slope;
 
 	for (int i = 0; i < N; i++) {
 		int x1, y1, x2, y2;
-		scanf("%d%d%d%d", &x1, &y1, &x2, &y2);
-		segments.emplace_back(Point(x1, y1), Point(x2, y2), i);
+		cin >> x1 >> y1 >> x2 >> y2;
+
+		endpoints.emplace_back(Point(x1, y1), Point(x2, y2));
+
+		if (x1 != x2) slope.insert((y2 - y1) / (x2 - x1));
 	}
 
-	solve();
+	while (slope.find(K) != slope.end()) K++;
 
-	printf("%ld",  ans.size());
+	for (int i = 0; i < N; i++) segments.emplace_back(endpoints[i].first, endpoints[i].second, i);
+
+	bentley_ottmann();
+
+	cout << ans.size();
 }

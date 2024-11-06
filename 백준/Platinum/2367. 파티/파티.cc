@@ -1,92 +1,139 @@
 #include <iostream>
-#include <queue>
 #include <vector>
+#include <queue>
+#include <algorithm>
 using namespace std;
 
-const int INF = 22222222;
-const int MAXN = 200;
-const int MAXD = 100;
+#define fastio cin.tie(NULL); cout.tie(NULL); ios_base::sync_with_stdio(false)
+#define all(v) v.begin(), v.end()
 
-int N, K, D;
-int source, sink;
-vector<vector<int>> adj;
-int cap[MAXN + MAXD + 2][MAXN + MAXD + 2], flow[MAXN + MAXD + 2][MAXN + MAXD + 2];
-int parent[MAXN + MAXD + 2], result;
+const int INF = 1e9;
 
-void maxFlow(int src, int snk){
+struct Flow_Network{
 
-    while (1){
-        queue<int> q;
-        q.push(src);
+	struct Edge {
+		int to;
+		int capacity;
+		int flow = 0;
 
-        for (int i = src; i <= snk; i++) parent[i] = -1;
+		Edge(int _to, int _cap) : to(_to), capacity(_cap) {}
 
-        while (!q.empty()){
-            int here = q.front();
-            q.pop();
+		Edge *reverse;
 
-            for (int there : adj[here]){
-                if (parent[there] != -1) continue;
-                int residCap = cap[here][there] - flow[here][there];
-                if (residCap > 0){
-                    parent[there] = here;
-                    q.push(there);
-                    if (there == snk) break;
-                }
-            }
-        }
+		void push(int f) {
+			flow += f;
+			reverse->flow -= f;
+		}
+	};
 
-        if (parent[snk] == -1) break;
-        int f = INF;
+	vector<vector<Edge*>> edges;
+	vector<int> layer, work;
+	int source = 0, sink = 0;
 
-        for (int i = snk; i != src; i = parent[i]){
-            int a = parent[i], b = i;
-            int cf = cap[a][b] - flow[a][b];
-            f = min(f, cf);
-        }
+	Flow_Network(int N): source(0), sink(N + 1), edges(N + 2), layer(N + 2), work(N + 2) {}
 
-        for (int i = snk; i != src; i = parent[i]){
-            int a = parent[i], b = i;
-            flow[a][b] += f;
-            flow[b][a] -= f;
-        }
-        result += f;
-    }
+	void add_edge(int from, int to, int c) {
+		Edge *edge = new Edge(to, c);
+		Edge *reverse_edge = new Edge(from, 0);
 
-}
+		edge->reverse = reverse_edge;
+		reverse_edge->reverse = edge;
 
-void addEdge(int a, int b, int capacity){
-    adj[a].push_back(b);
-    adj[b].push_back(a);
-    cap[a][b] = capacity;
-}
+		edges[from].emplace_back(edge);
+		edges[to].emplace_back(reverse_edge);
+	}
 
-int main(){
-    //유량 K
-    scanf("%d%d%d", &N, &K, &D);
+	bool find_augpath() {
+		queue<int> q;
+		q.push(source);
 
-    adj.resize(N + D + 2);
-    source = 0, sink = N + D + 1;
+		fill(all(layer), -1);
+		layer[source] = 0;
 
-    for (int i = 1; i <= D; i++){
-        int lim;
-        scanf("%d", &lim);
-        addEdge(N + i, sink, lim);
-    }
+		while (!q.empty()) {
+			int from = q.front();
+			q.pop();
 
-    for (int i = 1; i <= N; i++) {
-        addEdge(source, i, K);
+			for (auto &edge: edges[from]) {
+				int to = edge->to;
+				if (layer[to] != -1) continue;
+				if (edge->capacity - edge->flow > 0) {
+					q.push(to);
+					layer[edge->to] = layer[from] + 1;
+					if (to == sink) break;
+				}
+			}
+		}
 
-        int Z;
-        scanf("%d", &Z);
+		return layer[sink] != -1;
+	}
 
-        for (int j = 1; j <= Z; j++){
-            int food;
-            scanf("%d", &food);
-            addEdge(i, N + food, 1);
-        }
-    }
 
-    maxFlow(source, sink);
-    printf("%d", result);
+	int augment_flow(int cur, int flow) {
+		if (cur == sink) return flow;
+
+		for (int &i = work[cur]; i < edges[cur].size(); i++) {
+			Edge *edge = edges[cur][i];
+			int to = edge->to;
+			int residual_capacity = edge->capacity - edge->flow;
+
+			if (layer[to] != layer[cur] + 1) continue;
+			if (residual_capacity <= 0) continue;
+
+			int f_p = augment_flow(to, min(flow, residual_capacity));
+
+			if (f_p > 0) {
+				edge->push(f_p);
+				return f_p;
+			}
+		}
+		return 0;
+	}
+
+	int dinic() {
+		int max_flow = 0;
+
+		while (find_augpath()) {
+			fill(all(work), 0);
+		
+			while (true) {
+				int f = augment_flow(source, INF);
+				max_flow += f;
+				if (!f) break;
+			}
+
+		}
+
+		return max_flow;
+	}
+};
+
+int main() {
+	fastio;
+
+	int N, K, D;
+	cin >> N >> K >> D;
+
+	Flow_Network network(N + D);
+
+	for (int i = 1; i <= D; i++) {
+		int M;
+		cin >> M;
+		network.add_edge(N + i, network.sink, M);
+	}
+
+	for (int i = 1; i <= N; i++) {
+		network.add_edge(network.source, i, K);
+
+		int Z;
+		cin >> Z;
+
+		for (int j = 0; j < Z; j++) {
+			int food;
+			cin >> food;
+			network.add_edge(i, N + food, 1);
+		}
+	}
+
+	cout << network.dinic();
 }

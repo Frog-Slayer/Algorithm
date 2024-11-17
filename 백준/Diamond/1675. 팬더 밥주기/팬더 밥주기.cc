@@ -9,55 +9,72 @@ using namespace std;
 #define ub(v, x) upper_bound(all(v), x) - v.begin()
 #define compress(v) sort(all(v)); v.erase(unique(all(v)), v.end())
 
-struct Seg2D{
+typedef unsigned short us;
+
+struct Segtree_2D{
   int n;
-  vector<vector<int>> a;
-  vector<vector<int>> used;
+  vector<vector<us>> tree;
+  vector<vector<us>> used;
 
-  Seg2D(int n) : n(n), a(2*n), used(2*n) {}
+  Segtree_2D(int n) : n(n), tree(2 * n), used(2 * n) {}
 
-  void fakeUpd(int x, int y){
-    for(x += n; x >= 1; x >>= 1) used[x].emplace_back(y);
+  void fake_update(int x, int y){
+    for (x += n; x >= 1; x >>= 1) used[x].emplace_back(y);
   }
-  void fakeQuery(int x1, int y1, int x2, int y2){
-    for(x1 += n, x2 += n+1; x1 < x2; x1 >>= 1, x2 >>= 1){
-      if(x1&1){ used[x1].emplace_back(y1); used[x1++].emplace_back(y2); }
-      if(x2&1){ used[--x2].emplace_back(y1); used[x2].emplace_back(y2); }
+
+  void fake_query(int x1, int y1, int x2, int y2){
+    for (x1 += n, x2 += n + 1; x1 < x2; x1 >>= 1, x2 >>= 1){
+      if(x1 & 1){ 
+		  used[x1].emplace_back(y1); 
+		  used[x1++].emplace_back(y2);
+	  }
+
+      if(x2 & 1){ 
+		  used[--x2].emplace_back(y1); 
+		  used[x2].emplace_back(y2); 
+	  }
     }
   }
+
   void prepare(){
-    for(int i = 0; i < 2*n; i++){
-      if(!used[i].empty()){
-        sort(used[i].begin(), used[i].end());
-        used[i].erase(unique(used[i].begin(),used[i].end()),used[i].end());
-      }
-      used[i].shrink_to_fit();
-      a[i].resize(used[i].size()*2);
+    for(int i = 0; i < 2 * n; i++){
+		if (!used[i].empty()) { 
+			compress(used[i]);
+		}
+
+		tree[i].resize(used[i].size() * 2);
     }
   }
-  void upd(int x, int y, int val) {
+
+  void update(int x, int y, us val) {
     for(x += n; x >= 1; x >>= 1){
-      int i = lower_bound(used[x].begin(),used[x].end(),y)-used[x].begin() + used[x].size();
-      for(a[x][i] = max(a[x][i], val); i > 1; i >>= 1) a[x][i>>1] = max(a[x][i], a[x][i^1]);
+		int i = lb(used[x], y) + used[x].size();
+		tree[x][i] = max(tree[x][i], val);
+
+		for(; i > 1; i >>= 1) tree[x][i>>1] = max(tree[x][i], tree[x][i^1]);
     }
   }
-  int query1D(int x, int y1, int y2){
-    int ret = 0;
-    y1 = lower_bound(used[x].begin(),used[x].end(),y1)-used[x].begin();
-    y2 = lower_bound(used[x].begin(),used[x].end(),y2)-used[x].begin();
-    for(y1 += used[x].size(), y2 += used[x].size()+1; y1 < y2; y1 >>= 1, y2 >>= 1){
-      if(y1 & 1) ret = max(ret, a[x][y1++]);
-      if(y2 & 1) ret = max(ret, a[x][--y2]);
+
+  us query(int x, int y1, int y2){
+    us ret = 0;
+    y1 = lb(used[x], y1);
+    y2 = lb(used[x], y2);
+
+    for (y1 += used[x].size(), y2 += used[x].size() + 1; y1 < y2; y1 >>= 1, y2 >>= 1){
+		if(y1 & 1) ret = max(ret, tree[x][y1++]);
+		if(y2 & 1) ret = max(ret, tree[x][--y2]);
     }
     return ret;
   }
-  // sum of l-th to r-th element(0-indexed)
-  int query(int x1, int y1, int x2, int y2) {
-    int ret = 0;
-    for(x1 += n, x2 += n+1; x1 < x2; x1 >>= 1, x2 >>= 1){
-      if(x1&1) ret = max(ret, query1D(x1++, y1, y2));
-      if(x2&1) ret = max(ret, query1D(--x2, y1, y2));
+
+  us query(int x1, int y1, int x2, int y2) {
+    us ret = 0;
+
+    for (x1 += n, x2 += n+1; x1 < x2; x1 >>= 1, x2 >>= 1){
+      if (x1 & 1) ret = max(ret, query(x1++, y1, y2));
+      if (x2 & 1) ret = max(ret, query(--x2, y1, y2));
     }
+
     return ret;
   }
 };
@@ -83,7 +100,7 @@ int main() {
 	compress(xx);
 	compress(yy);
 
-	Seg2D tree(xx.size());
+	Segtree_2D tree(xx.size());
 	sort(all(bamboo));
 
 	int ans = 0;
@@ -94,8 +111,8 @@ int main() {
 		int rx = ub(xx, x + l) - 1;
 		int ry = ub(yy, y + l) - 1;
 
-		tree.fakeUpd(lb(xx, x), lb(yy, y));
-		tree.fakeQuery(lx, ly, rx, ry);
+		tree.fake_update(lb(xx, x), lb(yy, y));
+		tree.fake_query(lx, ly, rx, ry);
 	}
 
 	tree.prepare();
@@ -117,7 +134,7 @@ int main() {
 
 		for (int k = i; k < j; k++) {
 			auto &[w, x, y, l] = bamboo[k];
-			tree.upd(lb(xx, x), lb(yy, y), upd[k - i] + 1);
+			tree.update(lb(xx, x), lb(yy, y), upd[k - i] + 1);
 			ans = max(ans, upd[k - i] + 1);
 		}
 	}

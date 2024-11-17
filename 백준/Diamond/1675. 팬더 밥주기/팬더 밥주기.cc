@@ -1,3 +1,5 @@
+//Seg2D Offline Bottom-up implementation: https://infossm.github.io/blog/2019/11/15/2D-segment-tree/
+
 #include <iostream>
 #include <vector>
 #include <algorithm>

@@ -81,7 +81,7 @@ struct PST{
 	}
 
 	void update(int idx, int val) {
-		root.emplace_back(update(root.back(), 0, N - 1, idx, val));
+		root.emplace_back(update(root.back(), 1, N, idx, val));
 	}
 
 	ll query(int node, int start, int end, int left, int right) {
@@ -94,7 +94,7 @@ struct PST{
 	}
 
 	ll query(int version, int left, int right) {
-		return query(root[version], 0, N - 1, left, right);
+		return query(root[version], 1, N, left, right);
 	}
 };
 
@@ -134,13 +134,12 @@ int main() {
 
 
 	for (auto &[i, v]: upd) {
-		i--;
+		i;
 		pst.update(i, v);
 	}
 
 	for (auto &[k, s, e] : queries) {
-		s--; e--;
+		s; e;
 		cout << pst.query(k, s, e) << '\n';
 	}
-
 }

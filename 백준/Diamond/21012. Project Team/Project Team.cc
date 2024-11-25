@@ -85,17 +85,17 @@ struct PST{
 		root[engineer] = update(root[engineer - 1], 1, MAX_P, potential);
 	}
 
-	Result query(int node, int start, int end, int left, int right) {
+	Result query(int node1, int node2, int start, int end, int left, int right) {
 		if (right < start || end < left) return Result(0, 0) ;
-		if (left <= start && end <= right) return Result(nodes[node].cnt, nodes[node].val); 
+		if (left <= start && end <= right) return Result(nodes[node2].cnt - nodes[node1].cnt, nodes[node2].val - nodes[node1].val ); 
 
 		int mid = (start + end) / 2;
 
-		return query(nodes[node].left, start, mid, left, right) + query(nodes[node].right, mid + 1, end, left, right);
+		return query(nodes[node1].left, nodes[node2].left, start, mid, left, right) + query(nodes[node1].right, nodes[node2].right, mid + 1, end, left, right);
 	}
 
-	Result query(int version, int left, int right) {
-		return query(root[version], 1, MAX_P, left, right);
+	Result query(int v1, int v2, int left, int right) {
+		return query(root[v1], root[v2], 1, MAX_P, left, right);
 	}
 };
 
@@ -128,7 +128,7 @@ int main() {
 		while (left <= right) {
 			int mid = (left + right) / 2;
 
-			Result res = pst.query(r, mid, b) - pst.query(l - 1, mid, b);
+			Result res = pst.query(l - 1, r, mid, b);
 
 			if (res.first * s <= res.second){
 				right = mid - 1;
@@ -145,7 +145,7 @@ int main() {
 
 		if (lb > a) {
 			lb--;
-			left = 0, right = (pst.query(r, lb, lb) - pst.query(l - 1, lb, lb)).first;
+			left = 0, right = pst.query(l - 1, r, lb, lb).first;
 
 			while (left <= right) {
 				int mid = (left + right) / 2;

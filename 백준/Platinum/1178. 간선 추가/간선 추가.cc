@@ -33,12 +33,10 @@ int main() {
 	Union_Find uf(V);
 
 	vector<int> degree(V + 1);
-	vector<pair<int, int>> edges;
 
 	for (int i = 0; i < E; i++) {
 		int a, b;
 		cin >> a >> b;
-		edges.emplace_back(a, b);
 		degree[a]++;
 		degree[b]++;
 

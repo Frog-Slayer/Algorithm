@@ -8,12 +8,11 @@ using namespace std;
 #define fastio cin.tie(NULL); cout.tie(NULL); ios_base::sync_with_stdio(false)
 #define all(v) v.begin(), v.end()
 
-typedef long long ll;
-const ll INF = 1e12; 
+const int INF = 1e9; 
 
 struct Segtree {
 	int N;
-	vector<ll> tree, lazy;
+	vector<int> tree, lazy;
 	
 	Segtree(int N) : N(N), tree(4 * N + 4, INF), lazy(4 * N + 4, INF) {}
 
@@ -29,7 +28,7 @@ struct Segtree {
 		lazy[node] = INF;
 	}
 
-	void update(int node, int start, int end, int left, int right, ll val) {
+	void update(int node, int start, int end, int left, int right, int val) {
 		propagate(node, start, end);
 
 		if (right < start || end < left) return;
@@ -46,11 +45,11 @@ struct Segtree {
 		tree[node] = min(tree[node * 2], tree[node * 2 + 1]);
 	}
 
-	void update(int left, int right, ll val) {
+	void update(int left, int right, int val) {
 		update(1, 1, N, left, right, val);
 	}
 
-	ll query(int node, int start, int end, int left, int right) {
+	int query(int node, int start, int end, int left, int right) {
 		propagate(node, start, end);
 		if (right < start || end < left) return INF;
 		if (left <= start && end <= right) return tree[node];
@@ -60,16 +59,16 @@ struct Segtree {
 		return min(query(node * 2, start, mid, left, right), query(node * 2 + 1, mid + 1, end, left, right));
 	}
 
-	ll query(int idx) {
+	int query(int idx) {
 		return query(1, 1, N, idx, idx);
 	}
 };
 
 vector<vector<pair<int, int>>> edges;
-vector<ll> dist_a, dist_b;
+vector<int> dist_a, dist_b;
 
-void dijkstra(vector<ll>& dist, int st){
-	priority_queue<pair<ll, int>, vector<pair<ll, int>>, greater<>> pq;
+void dijkstra(vector<int>& dist, int st){
+	priority_queue<pair<int, int>, vector<pair<int, int>>, greater<>> pq;
 	pq.emplace(dist[st] = 0, st);
 
 	while (!pq.empty()) {
@@ -85,7 +84,7 @@ void dijkstra(vector<ll>& dist, int st){
 vector<int> parent_a, parent_b;
 vector<int> path;
 
-void dfs(vector<int> &parent, vector<ll> &dist, int st) {
+void dfs(vector<int> &parent, vector<int> &dist, int st) {
 	stack<tuple<int, int, int>> stk;
 	stk.emplace(st, 0, st);
 
@@ -162,8 +161,7 @@ int main() {
 	}
 
 	for (int i = 1; i < K; i++) {
-		ll ans = tree.query(i);
-		ans = (ans == INF ? -1 : ans);
-		cout << ans << '\n';
+		int ans = tree.query(i);
+		cout << (ans == INF ? -1 : ans) << '\n';
 	}
 }

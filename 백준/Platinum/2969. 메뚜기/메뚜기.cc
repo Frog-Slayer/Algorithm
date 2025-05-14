@@ -60,7 +60,8 @@ int main() {
 	int R, C;
 	cin >> R >> C;
 
-	vector<tuple<int, int, int>> v;
+	int idx = 0;
+	vector<tuple<int, short, short>> v(N * N);
 
 	horizontal.assign(N, Segtree(N));
 	vertical.assign(N, Segtree(N));
@@ -70,7 +71,7 @@ int main() {
 			int flower;
 			cin >> flower;
 
-			v.emplace_back(flower, i, j);
+			v[idx++] = make_tuple(flower, i, j);
 		}
 	}
 

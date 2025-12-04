@@ -12,19 +12,9 @@ using namespace std;
 typedef long long ll;
 
 struct Star{
-	ll x;
-	ll y;
+	ll dist;
 	ll s;
-
 	double angle;
-
-	void set_angle() { 
-		angle = atan2(y, x);
-	}
-
-	ll dist() { 
-		return x * x + y * y;
-	}
 };
 
 double diff(Star &a, Star &b) { 
@@ -42,8 +32,12 @@ int main() {
 	vector<Star> stars(N);
 
 	for (int i = 0; i < N; i++) { 
-		cin >> stars[i].x >> stars[i].y >> stars[i].s;
-		stars[i].set_angle();
+		ll x, y, z;
+		cin >> x >> y >> z;
+
+		stars[i].dist = x * x + y * y;
+		stars[i].angle = atan2(y, x);
+		stars[i].s = z;
 	}
 
 	vector<ll> p(M);
@@ -55,7 +49,6 @@ int main() {
 	}
 
 	auto sort_stars_by_angle = [&](Star &s1, Star &s2) -> bool{ 
-		if (s1.angle == s2.angle) return s1.dist() < s2.dist();
 		return s1.angle < s2.angle;
 	};
 	
@@ -72,13 +65,13 @@ int main() {
 		for (int l = 0, r = 0; l < N; l++) { 
 
 			while (r < 2 * N && diff(stars[l], stars[r]) <= M_PI / 2) { 
-				if (stars[r].dist() <= p[i]) sum += stars[r].s;
+				if (stars[r].dist <= p[i]) sum += stars[r].s;
 				r++;
 			}
 
 			ans = max(ans, sum - p[i]);
 
-			if (stars[l].dist() <= p[i]) sum -= stars[l].s;
+			if (stars[l].dist <= p[i]) sum -= stars[l].s;
 
 		}
 	}

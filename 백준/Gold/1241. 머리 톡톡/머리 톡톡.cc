@@ -1,7 +1,6 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
-#include <unordered_map>
 using namespace std;
 
 #define fastio cin.tie(NULL), cout.tie(NULL), ios_base::sync_with_stdio(false)
@@ -10,13 +9,14 @@ using namespace std;
 const int MAX_N = 1000000;
 
 int cnt[MAX_N + 1];
-unordered_map<int, int> m;
+int freq[MAX_N + 1];
 
 void set_cnt() { 
 	for (int i = 1; i <= MAX_N; i++) { 
-		int c = m[i];
+		int c = freq[i];
 		if (!c) continue;
 		for (int j = i; j <= MAX_N; j += i) { 
+			if (!freq[j]) continue;
 			cnt[j] += c;
 		}
 	}
@@ -31,10 +31,8 @@ int main() {
 	vector<int> num(N + 1);
 
 	for (int i = 1; i <= N; i++) { 
-		int n;
-		cin >> n;
-		num[i] = n;
-		m[n]++;
+		cin >> num[i];
+		freq[num[i]]++;
 	}
 
 	set_cnt();

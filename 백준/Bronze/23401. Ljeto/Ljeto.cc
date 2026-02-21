@@ -10,24 +10,22 @@ int main() {
 
 	int N;
 	cin >> N;
+	
+	vector<int> last(9, -1);
 
 	int pineapple = 0, blueberry = 0;
-
-	int prev_t = -1, prev_a = 0, prev_b = 0;
 
 	for (int i = 0; i < N; i++) { 
 		int t, a, b;
 		cin >> t >> a >> b;
 
 		int point = 100;
-		if (a == prev_a && t - prev_t <= 10) point += 50; 
+		if (last[a] != -1 && t - last[a] <= 10) point += 50; 
 
 		if (a < 5) pineapple += point;
 		else blueberry += point;
 
-		prev_t = t;
-		prev_a = a;
-		prev_b = b;
+		last[a] = t;
 	}
 
 	cout << pineapple << ' ' << blueberry;
